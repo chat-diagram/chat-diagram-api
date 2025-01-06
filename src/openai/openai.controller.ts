@@ -1,11 +1,27 @@
-import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  HttpStatus,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { Response } from 'express';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { OpenAIService } from './openai.service';
 import { EnhanceDescriptionDto } from './dto/enhance-description.dto';
 import { GenerateMermaidDto } from './dto/generate-mermaid.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('openai')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('openai')
 export class OpenAIController {
   constructor(private readonly openaiService: OpenAIService) {}

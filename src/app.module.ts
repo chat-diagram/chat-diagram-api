@@ -3,6 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { OpenAIModule } from './openai/openai.module';
+import { DiagramsModule } from './diagrams/diagrams.module';
+import { ProjectsModule } from './projects/projects.module';
+import { AuthModule } from './auth/auth.module';
 import { getDatabaseConfig } from './config/database.config';
 
 @Module({
@@ -17,6 +20,9 @@ import { getDatabaseConfig } from './config/database.config';
     }),
     UsersModule,
     OpenAIModule,
+    DiagramsModule,
+    ProjectsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
