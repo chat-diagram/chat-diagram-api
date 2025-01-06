@@ -58,4 +58,58 @@ export class OpenAIService {
 
     return stream;
   }
+
+  async generateMermaid(description: string) {
+    const completion = await this.openai.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: `请根据以下描述生成一个 Mermaid 的 DSL 代码：
+${description}
+
+要求：
+1. 自动判断最合适的 Mermaid 图表类型（如 sequenceDiagram、graph TD、stateDiagram 等）
+2. 使用正确的语法和合适的图表类型
+3. 节点 ID 必须有意义且唯一
+4. 确保语法正确
+5. 适当使用不同的形状和样式
+6. 只返回 Mermaid DSL 代码，不要其他解释
+7. 不要使用任何注释
+8. 不要使用任何代码块
+9. 不要出现 \`\`\` 代码块`,
+        },
+      ],
+      model: 'deepseek-chat',
+      stream: false,
+    });
+
+    return completion.choices[0].message.content;
+  }
+
+  async streamGenerateMermaid(description: string) {
+    const stream = await this.openai.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: `请根据以下描述生成一个 Mermaid 的 DSL 代码：
+${description}
+
+要求：
+1. 自动判断最合适的 Mermaid 图表类型（如 sequenceDiagram、graph TD、stateDiagram 等）
+2. 使用正确的语法和合适的图表类型
+3. 节点 ID 必须有意义且唯一
+4. 确保语法正确
+5. 适当使用不同的形状和样式
+6. 只返回 Mermaid DSL 代码，不要其他解释
+7. 不要使用任何注释
+8. 不要使用任何代码块
+9. 不要出现 \`\`\` 代码块`,
+        },
+      ],
+      model: 'deepseek-chat',
+      stream: true,
+    });
+
+    return stream;
+  }
 }
