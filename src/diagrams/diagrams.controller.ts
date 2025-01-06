@@ -129,19 +129,83 @@ export class DiagramsController {
     return this.diagramsService.findOne(id, req.user.id);
   }
 
-  @ApiOperation({ summary: 'Create a new version of the diagram' })
+  @ApiOperation({ summary: 'Create a new version of the diagram with streaming response' })
   @ApiResponse({
     status: 201,
-    description: 'New version created successfully',
-    type: DiagramVersion,
+    description: 'Version creation progress and result',
   })
   @Post(':id/versions')
-  createVersion(
+  async createVersion(
     @Param('id') id: string,
     @Body() createVersionDto: CreateVersionDto,
     @Request() req,
+    @Res() response: Response,
   ) {
-    return this.diagramsService.createVersion(id, req.user.id, createVersionDto);
+    response.setHeader('Content-Type', 'text/event-stream');
+    response.setHeader('Cache-Control', 'no-cache');
+    response.setHeader('Connection', 'keep-alive');
+
+    try {
+      // Send progress update: Starting
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'starting',
+          message: 'Starting version creation...',
+        })}\n\n`,
+      );
+
+      // Get the diagram first to access its description
+      const diagram = await this.diagramsService.findOne(id, req.user.id);
+
+      // Generate Mermaid code with streaming
+      const stream = await this.diagramsService.generateMermaidCode(
+        diagram.description,
+      );
+
+      // Stream the Mermaid code generation progress
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+          response.write(
+            `data: ${JSON.stringify({
+              status: 'generating',
+              content,
+            })}\n\n`,
+          );
+        }
+      }
+
+      // Send progress update: Saving
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'saving',
+          message: 'Saving version...',
+        })}\n\n`,
+      );
+
+      // Save the version
+      const version = await this.diagramsService.createVersion(
+        id,
+        req.user.id,
+        createVersionDto,
+      );
+
+      // Send the final result
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'completed',
+          version,
+        })}\n\n`,
+      );
+
+      response.write('data: [DONE]\n\n');
+      response.end();
+    } catch (error) {
+      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Error creating version',
+        error: error.message,
+      });
+    }
   }
 
   @ApiOperation({ summary: 'Get all versions of a diagram' })

@@ -31,16 +31,10 @@ export class DiagramsService {
     // Check if user has access to the project
     await this.projectsService.findOne(createDiagramDto.projectId, userId);
 
-    // Generate Mermaid code using OpenAI
-    const mermaidCode = await this.openaiService.generateMermaid(
-      createDiagramDto.description,
-    );
-
-    // Create new diagram
+    // Create new diagram without Mermaid code first
     const diagram = this.diagramsRepository.create({
       ...createDiagramDto,
       userId,
-      mermaidCode,
       currentVersion: 1,
     });
 
@@ -49,7 +43,7 @@ export class DiagramsService {
     // Create initial version
     await this.versionsRepository.save({
       diagramId: savedDiagram.id,
-      mermaidCode,
+      mermaidCode: '',
       versionNumber: 1,
       comment: '初始版本',
     });
@@ -89,22 +83,16 @@ export class DiagramsService {
   ) {
     const diagram = await this.findOne(id, userId);
 
-    // Generate new Mermaid code
-    const mermaidCode = await this.openaiService.generateMermaid(
-      diagram.description,
-    );
-
-    // Create new version
+    // Create new version without Mermaid code first
     const newVersion = await this.versionsRepository.save({
       diagramId: diagram.id,
-      mermaidCode,
+      mermaidCode: '',
       versionNumber: diagram.currentVersion + 1,
       comment: createVersionDto.comment,
     });
 
-    // Update diagram with new version
+    // Update diagram with new version number
     await this.diagramsRepository.update(id, {
-      mermaidCode,
       currentVersion: newVersion.versionNumber,
     });
 
