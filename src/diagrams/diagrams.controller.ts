@@ -8,7 +8,10 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  Res,
+  HttpStatus,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -29,15 +32,78 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class DiagramsController {
   constructor(private readonly diagramsService: DiagramsService) {}
 
-  @ApiOperation({ summary: 'Create a new diagram' })
+  @ApiOperation({ summary: 'Create a new diagram with streaming response' })
   @ApiResponse({
     status: 201,
-    description: 'Diagram successfully created',
-    type: Diagram,
+    description: 'Diagram creation progress and result',
   })
   @Post()
-  create(@Body() createDiagramDto: CreateDiagramDto, @Request() req) {
-    return this.diagramsService.create(createDiagramDto, req.user.id);
+  async create(
+    @Body() createDiagramDto: CreateDiagramDto,
+    @Request() req,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Content-Type', 'text/event-stream');
+    response.setHeader('Cache-Control', 'no-cache');
+    response.setHeader('Connection', 'keep-alive');
+
+    try {
+      // Send progress update: Starting
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'starting',
+          message: 'Starting diagram creation...',
+        })}\n\n`,
+      );
+
+      // Generate Mermaid code with streaming
+      const stream = await this.diagramsService.generateMermaidCode(
+        createDiagramDto.description,
+      );
+
+      // Stream the Mermaid code generation progress
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+          response.write(
+            `data: ${JSON.stringify({
+              status: 'generating',
+              content,
+            })}\n\n`,
+          );
+        }
+      }
+
+      // Send progress update: Saving
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'saving',
+          message: 'Saving diagram...',
+        })}\n\n`,
+      );
+
+      // Save the diagram
+      const diagram = await this.diagramsService.create(
+        createDiagramDto,
+        req.user.id,
+      );
+
+      // Send the final result
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'completed',
+          diagram,
+        })}\n\n`,
+      );
+
+      response.write('data: [DONE]\n\n');
+      response.end();
+    } catch (error) {
+      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Error creating diagram',
+        error: error.message,
+      });
+    }
   }
 
   @ApiOperation({ summary: 'Get all diagrams for the current user' })

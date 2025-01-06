@@ -23,6 +23,10 @@ export class DiagramsService {
     private readonly projectsService: ProjectsService,
   ) {}
 
+  async generateMermaidCode(description: string) {
+    return this.openaiService.streamGenerateMermaid(description);
+  }
+
   async create(createDiagramDto: CreateDiagramDto, userId: string) {
     // Check if user has access to the project
     await this.projectsService.findOne(createDiagramDto.projectId, userId);

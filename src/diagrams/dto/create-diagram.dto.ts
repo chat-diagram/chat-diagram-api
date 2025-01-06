@@ -25,4 +25,4 @@ export class CreateDiagramDto {
   @IsUUID()
   @IsNotEmpty()
   projectId: string;
-} 
+}

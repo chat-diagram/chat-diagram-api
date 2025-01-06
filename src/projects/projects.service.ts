@@ -75,4 +75,4 @@ export class ProjectsService {
     await this.projectsRepository.restore(id);
     return { message: 'Project successfully restored' };
   }
-} 
+}
