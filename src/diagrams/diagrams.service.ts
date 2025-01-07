@@ -59,6 +59,17 @@ export class DiagramsService {
     });
   }
 
+  async findByProject(projectId: string, userId: string) {
+    // Check if user has access to the project
+    await this.projectsService.findOne(projectId, userId);
+
+    return this.diagramsRepository.find({
+      where: { projectId },
+      order: { updatedAt: 'DESC' },
+      relations: ['versions'],
+    });
+  }
+
   async findOne(id: string, userId: string) {
     const diagram = await this.diagramsRepository.findOne({
       where: { id },

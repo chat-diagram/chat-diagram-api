@@ -117,6 +117,18 @@ export class DiagramsController {
     return this.diagramsService.findAll(req.user.id);
   }
 
+  @ApiOperation({ summary: 'Get all diagrams in a project' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of diagrams in the project',
+    type: [Diagram],
+  })
+  @ApiResponse({ status: 404, description: 'Project not found' })
+  @Get('project/:projectId')
+  findByProject(@Param('projectId') projectId: string, @Request() req) {
+    return this.diagramsService.findByProject(projectId, req.user.id);
+  }
+
   @ApiOperation({ summary: 'Get a specific diagram' })
   @ApiResponse({
     status: 200,
