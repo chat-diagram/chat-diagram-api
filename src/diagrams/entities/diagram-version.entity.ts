@@ -26,6 +26,13 @@ export class DiagramVersion {
   diagramId: string;
 
   @ApiProperty({
+    example: '用户输入用户名密码，系统验证身份...',
+    description: 'The description of the diagram for this version',
+  })
+  @Column({ type: 'text' })
+  description: string;
+
+  @ApiProperty({
     example: 'sequenceDiagram\nUser->>System: Login...',
     description: 'The Mermaid DSL code for this version',
   })

@@ -112,4 +112,29 @@ ${description}
 
     return stream;
   }
+
+  async generateTitle(description: string) {
+    const completion = await this.openai.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: `请根据以下描述生成一个简洁的标题，要求：
+1. 标题长度不超过 15 个字
+2. 突出流程或功能的核心特点
+3. 使用专业且准确的词汇
+4. 只返回标题文本，不要其他解释或标点符号
+
+示例描述：用户在系统中输入用户名和密码，系统验证用户身份，如果验证通过则生成 JWT token 并返回，如果验证失败则返回错误信息。
+示例标题：用户登录认证流程
+
+请为以下描述生成标题：
+${description}`,
+        },
+      ],
+      model: 'deepseek-chat',
+      stream: false,
+    });
+
+    return completion.choices[0].message.content;
+  }
 }

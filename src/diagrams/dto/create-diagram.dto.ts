@@ -1,14 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateDiagramDto {
   @ApiProperty({
-    description: 'The title of the diagram',
+    description: 'The title of the diagram (optional, will be auto-generated if not provided)',
     example: '用户登录流程',
+    required: false,
   })
   @IsString()
-  @IsNotEmpty()
-  title: string;
+  @IsOptional()
+  title?: string;
 
   @ApiProperty({
     description: 'The description of the diagram',

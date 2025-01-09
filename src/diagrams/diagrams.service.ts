@@ -34,9 +34,16 @@ export class DiagramsService {
     // Check if user has access to the project
     await this.projectsService.findOne(createDiagramDto.projectId, userId);
 
+    // Generate title if not provided
+    let title = createDiagramDto.title;
+    if (!title) {
+      title = await this.openaiService.generateTitle(createDiagramDto.description);
+    }
+
     // Create new diagram with Mermaid code
     const diagram = this.diagramsRepository.create({
       ...createDiagramDto,
+      title,
       userId,
       currentVersion: 1,
     });
@@ -47,6 +54,7 @@ export class DiagramsService {
     await this.versionsRepository.save({
       diagramId: savedDiagram.id,
       mermaidCode: createDiagramDto.mermaidCode,
+      description: createDiagramDto.description,
       versionNumber: 1,
       comment: '初始版本',
     });
@@ -101,6 +109,7 @@ export class DiagramsService {
     const newVersion = await this.versionsRepository.save({
       diagramId: diagram.id,
       mermaidCode: createVersionDto.mermaidCode,
+      description: diagram.description,
       versionNumber: diagram.currentVersion + 1,
       comment: createVersionDto.comment,
     });
@@ -163,5 +172,16 @@ export class DiagramsService {
 
     await this.diagramsRepository.restore(id);
     return { message: 'Diagram successfully restored' };
+  }
+
+  async updateTitle(id: string, userId: string, title: string) {
+    const diagram = await this.findOne(id, userId);
+    
+    await this.diagramsRepository.update(id, { title });
+    
+    return {
+      message: 'Title successfully updated',
+      title,
+    };
   }
 }

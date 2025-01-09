@@ -24,6 +24,7 @@ import { CreateVersionDto } from './dto/create-version.dto';
 import { Diagram } from './entities/diagram.entity';
 import { DiagramVersion } from './entities/diagram-version.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateTitleDto } from './dto/update-title.dto';
 
 @ApiTags('diagrams')
 @ApiBearerAuth()
@@ -277,5 +278,24 @@ export class DiagramsController {
   @Post(':id/restore')
   restore(@Param('id') id: string, @Request() req) {
     return this.diagramsService.restore(id, req.user.id);
+  }
+
+  @ApiOperation({ summary: 'Update diagram title' })
+  @ApiResponse({
+    status: 200,
+    description: 'Title successfully updated',
+  })
+  @ApiResponse({ status: 404, description: 'Diagram not found' })
+  @Post(':id/title')
+  updateTitle(
+    @Param('id') id: string,
+    @Body() updateTitleDto: UpdateTitleDto,
+    @Request() req,
+  ) {
+    return this.diagramsService.updateTitle(
+      id,
+      req.user.id,
+      updateTitleDto.title,
+    );
   }
 }
