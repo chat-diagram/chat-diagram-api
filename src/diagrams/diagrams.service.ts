@@ -27,11 +27,14 @@ export class DiagramsService {
     return this.openaiService.streamGenerateMermaid(description);
   }
 
-  async create(createDiagramDto: CreateDiagramDto, userId: string) {
+  async create(
+    createDiagramDto: CreateDiagramDto & { mermaidCode: string },
+    userId: string,
+  ) {
     // Check if user has access to the project
     await this.projectsService.findOne(createDiagramDto.projectId, userId);
 
-    // Create new diagram without Mermaid code first
+    // Create new diagram with Mermaid code
     const diagram = this.diagramsRepository.create({
       ...createDiagramDto,
       userId,
@@ -40,10 +43,10 @@ export class DiagramsService {
 
     const savedDiagram = await this.diagramsRepository.save(diagram);
 
-    // Create initial version
+    // Create initial version with the generated Mermaid code
     await this.versionsRepository.save({
       diagramId: savedDiagram.id,
-      mermaidCode: '',
+      mermaidCode: createDiagramDto.mermaidCode,
       versionNumber: 1,
       comment: '初始版本',
     });
@@ -90,21 +93,22 @@ export class DiagramsService {
   async createVersion(
     id: string,
     userId: string,
-    createVersionDto: CreateVersionDto,
+    createVersionDto: CreateVersionDto & { mermaidCode: string },
   ) {
     const diagram = await this.findOne(id, userId);
 
-    // Create new version without Mermaid code first
+    // Create new version with the generated Mermaid code
     const newVersion = await this.versionsRepository.save({
       diagramId: diagram.id,
-      mermaidCode: '',
+      mermaidCode: createVersionDto.mermaidCode,
       versionNumber: diagram.currentVersion + 1,
       comment: createVersionDto.comment,
     });
 
-    // Update diagram with new version number
+    // Update diagram with new version number and Mermaid code
     await this.diagramsRepository.update(id, {
       currentVersion: newVersion.versionNumber,
+      mermaidCode: createVersionDto.mermaidCode,
     });
 
     return newVersion;

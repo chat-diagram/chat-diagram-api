@@ -57,6 +57,7 @@ export class DiagramsController {
       );
 
       // Generate Mermaid code with streaming
+      let fullMermaidCode = '';
       const stream = await this.diagramsService.generateMermaidCode(
         createDiagramDto.description,
       );
@@ -65,6 +66,7 @@ export class DiagramsController {
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
+          fullMermaidCode += content;
           response.write(
             `data: ${JSON.stringify({
               status: 'generating',
@@ -82,9 +84,12 @@ export class DiagramsController {
         })}\n\n`,
       );
 
-      // Save the diagram
+      // Save the diagram with the generated Mermaid code
       const diagram = await this.diagramsService.create(
-        createDiagramDto,
+        {
+          ...createDiagramDto,
+          mermaidCode: fullMermaidCode,
+        },
         req.user.id,
       );
 
@@ -141,7 +146,9 @@ export class DiagramsController {
     return this.diagramsService.findOne(id, req.user.id);
   }
 
-  @ApiOperation({ summary: 'Create a new version of the diagram with streaming response' })
+  @ApiOperation({
+    summary: 'Create a new version of the diagram with streaming response',
+  })
   @ApiResponse({
     status: 201,
     description: 'Version creation progress and result',
@@ -170,6 +177,7 @@ export class DiagramsController {
       const diagram = await this.diagramsService.findOne(id, req.user.id);
 
       // Generate Mermaid code with streaming
+      let fullMermaidCode = '';
       const stream = await this.diagramsService.generateMermaidCode(
         diagram.description,
       );
@@ -178,6 +186,7 @@ export class DiagramsController {
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
+          fullMermaidCode += content;
           response.write(
             `data: ${JSON.stringify({
               status: 'generating',
@@ -195,11 +204,14 @@ export class DiagramsController {
         })}\n\n`,
       );
 
-      // Save the version
+      // Save the version with the generated Mermaid code
       const version = await this.diagramsService.createVersion(
         id,
         req.user.id,
-        createVersionDto,
+        {
+          ...createVersionDto,
+          mermaidCode: fullMermaidCode,
+        },
       );
 
       // Send the final result
