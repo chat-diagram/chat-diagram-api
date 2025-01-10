@@ -5,7 +5,7 @@ import { UsersModule } from './users/users.module';
 import { OpenAIModule } from './openai/openai.module';
 import { DiagramsModule } from './diagrams/diagrams.module';
 import { ProjectsModule } from './projects/projects.module';
-import { AuthModule } from './auth/auth.module';
+import { PaymentsModule } from './payments/payments.module';
 import { getDatabaseConfig } from './config/database.config';
 
 @Module({
@@ -22,7 +22,7 @@ import { getDatabaseConfig } from './config/database.config';
     OpenAIModule,
     DiagramsModule,
     ProjectsModule,
-    AuthModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}
