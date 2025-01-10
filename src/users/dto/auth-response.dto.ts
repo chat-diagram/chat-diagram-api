@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../entities/user.entity';
+import { UserSubscription } from '../entities/user-subscription.entity';
 
 export class AuthResponseDto {
   @ApiProperty({
@@ -7,6 +8,12 @@ export class AuthResponseDto {
     type: () => User,
   })
   user: User;
+
+  @ApiProperty({
+    description: 'The subscription information',
+    type: () => UserSubscription,
+  })
+  subscription: UserSubscription;
 
   @ApiProperty({
     description:

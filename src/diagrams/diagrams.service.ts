@@ -11,6 +11,7 @@ import { Diagram } from './entities/diagram.entity';
 import { DiagramVersion } from './entities/diagram-version.entity';
 import { CreateDiagramDto } from './dto/create-diagram.dto';
 import { CreateVersionDto } from './dto/create-version.dto';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class DiagramsService {
@@ -21,6 +22,7 @@ export class DiagramsService {
     private readonly versionsRepository: Repository<DiagramVersion>,
     private readonly openaiService: OpenAIService,
     private readonly projectsService: ProjectsService,
+    private readonly usersService: UsersService,
   ) {}
 
   async generateMermaidCode(description: string) {
@@ -117,6 +119,9 @@ export class DiagramsService {
     createVersionDto: CreateVersionDto & { mermaidCode: string },
   ) {
     const diagram = await this.findOne(id, userId);
+
+    // Check version limit for non-pro users
+    await this.usersService.checkVersionLimit(userId);
 
     // Generate version comment by comparing descriptions
     let comment = '';

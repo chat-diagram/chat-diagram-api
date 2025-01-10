@@ -6,12 +6,14 @@ import { Diagram } from './entities/diagram.entity';
 import { DiagramVersion } from './entities/diagram-version.entity';
 import { OpenAIModule } from '../openai/openai.module';
 import { ProjectsModule } from '../projects/projects.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Diagram, DiagramVersion]),
     OpenAIModule,
     ProjectsModule,
+    UsersModule,
   ],
   controllers: [DiagramsController],
   providers: [DiagramsService],

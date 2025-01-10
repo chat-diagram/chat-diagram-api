@@ -1,10 +1,21 @@
-import { Controller, Post, Delete, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Get,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserSubscription } from './entities/user-subscription.entity';
 
 @ApiTags('users')
 @Controller('users')
@@ -70,5 +81,29 @@ export class UsersController {
   @Post(':id/restore')
   restore(@Param('id') id: string): Promise<MessageResponseDto> {
     return this.usersService.restore(id);
+  }
+
+  @ApiOperation({ summary: 'Get subscription status' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current subscription status',
+    type: UserSubscription,
+  })
+  @Get('subscription')
+  @UseGuards(JwtAuthGuard)
+  getSubscriptionStatus(@Request() req) {
+    return this.usersService.getSubscriptionStatus(req.user.id);
+  }
+
+  @ApiOperation({ summary: 'Upgrade to pro subscription' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully upgraded to pro',
+    type: UserSubscription,
+  })
+  @Post('subscription/upgrade')
+  @UseGuards(JwtAuthGuard)
+  upgradeToPro(@Request() req) {
+    return this.usersService.upgradeToPro(req.user.id);
   }
 }

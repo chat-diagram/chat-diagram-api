@@ -3,12 +3,14 @@ import {
   ConflictException,
   UnauthorizedException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
+import { UserSubscription } from './entities/user-subscription.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 
@@ -17,6 +19,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(UserSubscription)
+    private readonly subscriptionsRepository: Repository<UserSubscription>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -26,7 +30,7 @@ export class UsersService {
     // Check if user already exists
     const existingUser = await this.usersRepository.findOne({
       where: [{ username }, { email }],
-      withDeleted: true, // 同时检查已删除的用户
+      withDeleted: true,
     });
 
     if (existingUser) {
@@ -43,7 +47,14 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    await this.usersRepository.save(user);
+    const savedUser = await this.usersRepository.save(user);
+
+    // Create initial subscription
+    const subscription = await this.subscriptionsRepository.save({
+      userId: savedUser.id,
+      isPro: false,
+      remainingVersions: 3,
+    });
 
     // Generate JWT token
     const token = this.jwtService.sign({
@@ -51,7 +62,68 @@ export class UsersService {
       sub: user.id,
     });
 
-    return { user, token };
+    return { user, subscription, token };
+  }
+
+  async checkVersionLimit(userId: string) {
+    const subscription = await this.subscriptionsRepository.findOne({
+      where: { userId },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    // Pro users have unlimited versions
+    if (subscription.isPro) {
+      return true;
+    }
+
+    // Check if non-pro user has remaining versions
+    if (subscription.remainingVersions <= 0) {
+      throw new ForbiddenException(
+        'No remaining version generations. Please upgrade to Pro.',
+      );
+    }
+
+    // Decrement remaining versions
+    await this.subscriptionsRepository.update(subscription.id, {
+      remainingVersions: subscription.remainingVersions - 1,
+    });
+
+    return true;
+  }
+
+  async getSubscriptionStatus(userId: string) {
+    const subscription = await this.subscriptionsRepository.findOne({
+      where: { userId },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    return subscription;
+  }
+
+  async upgradeToPro(userId: string, durationInDays: number = 30) {
+    const subscription = await this.subscriptionsRepository.findOne({
+      where: { userId },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
+    const proExpiresAt = new Date();
+    proExpiresAt.setDate(proExpiresAt.getDate() + durationInDays);
+
+    await this.subscriptionsRepository.update(subscription.id, {
+      isPro: true,
+      proExpiresAt,
+    });
+
+    return this.getSubscriptionStatus(userId);
   }
 
   async login(loginUserDto: LoginUserDto) {
@@ -60,7 +132,7 @@ export class UsersService {
     // Find user
     const user = await this.usersRepository.findOne({
       where: { username },
-      withDeleted: false, // 不包含已删除的用户
+      withDeleted: false,
     });
 
     if (!user) {
@@ -74,13 +146,22 @@ export class UsersService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Get subscription info
+    const subscription = await this.subscriptionsRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!subscription) {
+      throw new NotFoundException('Subscription not found');
+    }
+
     // Generate JWT token
     const token = this.jwtService.sign({
       username: user.username,
       sub: user.id,
     });
 
-    return { user, token };
+    return { user, subscription, token };
   }
 
   async softDelete(userId: string) {
