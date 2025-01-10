@@ -35,7 +35,7 @@ export class Payment {
 
   @ApiProperty({
     enum: PaymentMethod,
-    description: '支付方式',
+    description: 'Payment method',
     example: PaymentMethod.ALIPAY,
   })
   @Column({
@@ -46,7 +46,7 @@ export class Payment {
 
   @ApiProperty({
     enum: PaymentStatus,
-    description: '支付状态',
+    description: 'Payment status',
     example: PaymentStatus.SUCCESS,
   })
   @Column({
@@ -57,28 +57,28 @@ export class Payment {
   status: PaymentStatus;
 
   @ApiProperty({
-    description: '订阅时长（天数）',
+    description: 'Subscription duration in days',
     example: 30,
   })
   @Column()
   durationInDays: number;
 
   @ApiProperty({
-    description: '支付金额（分）',
+    description: 'Payment amount in cents',
     example: 2900,
   })
   @Column()
   amount: number;
 
   @ApiProperty({
-    description: '第三方支付订单号',
+    description: 'Third-party payment transaction number',
     example: '2024010410595900001',
   })
   @Column({ nullable: true })
   tradeNo: string;
 
   @ApiProperty({
-    description: '支付完成时间',
+    description: 'Payment completion time',
     example: '2024-01-04T10:59:59Z',
   })
   @Column({ type: 'timestamp', nullable: true })

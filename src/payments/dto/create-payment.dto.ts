@@ -9,7 +9,7 @@ export enum PaymentMethod {
 export class CreatePaymentDto {
   @ApiProperty({
     enum: PaymentMethod,
-    description: '支付方式',
+    description: 'Payment method',
     example: PaymentMethod.ALIPAY,
   })
   @IsEnum(PaymentMethod)
@@ -17,7 +17,7 @@ export class CreatePaymentDto {
   method: PaymentMethod;
 
   @ApiProperty({
-    description: '订阅时长（天数）',
+    description: 'Subscription duration in days',
     example: 30,
     minimum: 30,
   })

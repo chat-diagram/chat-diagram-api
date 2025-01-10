@@ -25,10 +25,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @ApiOperation({ summary: '创建支付订单' })
+  @ApiOperation({ summary: 'Create payment order' })
   @ApiResponse({
     status: 201,
-    description: '支付订单创建成功',
+    description: 'Payment order created successfully',
     type: Payment,
   })
   @Post()
@@ -36,10 +36,10 @@ export class PaymentsController {
     return this.paymentsService.create(req.user.id, createPaymentDto);
   }
 
-  @ApiOperation({ summary: '获取用户支付记录' })
+  @ApiOperation({ summary: 'Get user payment history' })
   @ApiResponse({
     status: 200,
-    description: '支付记录列表',
+    description: 'List of payment records',
     type: [Payment],
   })
   @Get()
@@ -47,10 +47,10 @@ export class PaymentsController {
     return this.paymentsService.findUserPayments(req.user.id);
   }
 
-  @ApiOperation({ summary: '获取支付订单详情' })
+  @ApiOperation({ summary: 'Get payment order details' })
   @ApiResponse({
     status: 200,
-    description: '支付订单详情',
+    description: 'Payment order details',
     type: Payment,
   })
   @Get(':id')
@@ -58,20 +58,20 @@ export class PaymentsController {
     return this.paymentsService.findOne(id, req.user.id);
   }
 
-  @ApiOperation({ summary: '支付宝支付回调' })
+  @ApiOperation({ summary: 'Alipay payment callback' })
   @ApiResponse({
     status: 200,
-    description: '支付回调处理成功',
+    description: 'Payment callback processed successfully',
   })
   @Post('alipay/callback')
   handleAlipayCallback(@Body() params: any) {
     return this.paymentsService.handleAlipayCallback(params);
   }
 
-  @ApiOperation({ summary: '微信支付回调' })
+  @ApiOperation({ summary: 'WeChat Pay callback' })
   @ApiResponse({
     status: 200,
-    description: '支付回调处理成功',
+    description: 'Payment callback processed successfully',
   })
   @Post('wechat/callback')
   handleWechatCallback(@Body() params: any) {

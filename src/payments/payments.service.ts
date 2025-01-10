@@ -43,8 +43,8 @@ export class PaymentsService {
   }
 
   private calculateAmount(durationInDays: number): number {
-    // 计算支付金额（以分为单位）
-    const pricePerDay = 100; // 1元/天
+    // Calculate payment amount (in cents)
+    const pricePerDay = 100; // 1 CNY per day
     return durationInDays * pricePerDay;
   }
 
@@ -59,7 +59,7 @@ export class PaymentsService {
       status: PaymentStatus.PENDING,
     });
 
-    // 根据支付方式生成支付链接
+    // Generate payment URL based on payment method
     let payUrl: string;
     if (createPaymentDto.method === PaymentMethod.ALIPAY) {
       payUrl = await this.createAlipayOrder(payment);
@@ -76,22 +76,22 @@ export class PaymentsService {
   private async createAlipayOrder(payment: Payment): Promise<string> {
     const outTradeNo = `${Date.now()}_${payment.id}`;
     try {
-      const result = await this.alipaySdk.pageExec('alipay.trade.page.pay', {
+      const result = this.alipaySdk.pageExec('alipay.trade.page.pay', {
         notifyUrl: this.configService.get('ALIPAY_NOTIFY_URL'),
         returnUrl: this.configService.get('ALIPAY_RETURN_URL'),
         bizContent: {
           outTradeNo,
           productCode: 'FAST_INSTANT_TRADE_PAY',
           totalAmount: (payment.amount / 100).toFixed(2),
-          subject: `订阅 ${payment.durationInDays} 天`,
-          body: `开通专业版 ${payment.durationInDays} 天`,
+          subject: `Subscribe for ${payment.durationInDays} days`,
+          body: `Activate Pro Plan for ${payment.durationInDays} days`,
         },
       });
 
       return result;
     } catch (error) {
-      console.error('创建支付宝订单失败:', error);
-      throw new BadRequestException('创建支付订单失败');
+      console.error('Failed to create Alipay order:', error);
+      throw new BadRequestException('Failed to create payment order');
     }
   }
 
@@ -99,12 +99,9 @@ export class PaymentsService {
     try {
       const outTradeNo = `${Date.now()}_${payment.id}`;
       const notifyUrl = this.configService.get('WECHAT_NOTIFY_URL');
-      const appId = this.configService.get('WECHAT_APP_ID');
-      const mchId = this.configService.get('WECHAT_MCH_ID');
-
-      // 创建统一下单
+      // Create unified order
       const result = await this.wechatPay.transactions_native({
-        description: `订阅 ${payment.durationInDays} 天`,
+        description: `Subscribe for ${payment.durationInDays} days`,
         out_trade_no: outTradeNo,
         notify_url: notifyUrl,
         amount: {
@@ -122,17 +119,17 @@ export class PaymentsService {
 
       return result.data.code_url;
     } catch (error) {
-      console.error('创建微信支付订单失败:', error);
-      throw new BadRequestException('创建支付订单失败');
+      console.error('Failed to create WeChat Pay order:', error);
+      throw new BadRequestException('Failed to create payment order');
     }
   }
 
   async handleAlipayCallback(params: Record<string, string>) {
     try {
-      // 验证签名
+      // Verify signature
       const isValid = await this.alipaySdk.checkNotifySign(params);
       if (!isValid) {
-        throw new BadRequestException('签名验证失败');
+        throw new BadRequestException('Invalid signature');
       }
 
       const payment = await this.paymentsRepository.findOne({
@@ -140,18 +137,18 @@ export class PaymentsService {
       });
 
       if (!payment) {
-        throw new NotFoundException('支付订单不存在');
+        throw new NotFoundException('Payment order not found');
       }
 
       if (params.trade_status === 'TRADE_SUCCESS') {
-        // 更新支付状态
+        // Update payment status
         await this.paymentsRepository.update(payment.id, {
           status: PaymentStatus.SUCCESS,
           tradeNo: params.trade_no,
           paidAt: new Date(),
         });
 
-        // 更新用户订阅状态
+        // Update user subscription status
         await this.usersService.upgradeToPro(
           payment.userId,
           payment.durationInDays,
@@ -164,25 +161,25 @@ export class PaymentsService {
 
       return 'success';
     } catch (error) {
-      console.error('处理支付宝回调失败:', error);
-      throw new BadRequestException('处理支付回调失败');
+      console.error('Failed to handle Alipay callback:', error);
+      throw new BadRequestException('Failed to process payment callback');
     }
   }
 
   async handleWechatCallback(params: Record<string, any>) {
     try {
-      // 验证签名
+      // Verify signature
       const signature = params.signature;
       const timestamp = params.timestamp;
       const nonce = params.nonce;
       const body = params.body;
 
-      // 验证签名
+      // Generate signature
       const message = `${timestamp}\n${nonce}\n${body}\n`;
       const sign = createHash('sha256').update(message).digest('base64');
 
       if (sign !== signature) {
-        throw new BadRequestException('签名验证失败');
+        throw new BadRequestException('Invalid signature');
       }
 
       const result = JSON.parse(body);
@@ -191,18 +188,18 @@ export class PaymentsService {
       });
 
       if (!payment) {
-        throw new NotFoundException('支付订单不存在');
+        throw new NotFoundException('Payment order not found');
       }
 
       if (result.trade_state === 'SUCCESS') {
-        // 更新支付状态
+        // Update payment status
         await this.paymentsRepository.update(payment.id, {
           status: PaymentStatus.SUCCESS,
           tradeNo: result.transaction_id,
           paidAt: new Date(),
         });
 
-        // 更新用户订阅状态
+        // Update user subscription status
         await this.usersService.upgradeToPro(
           payment.userId,
           payment.durationInDays,
@@ -215,11 +212,11 @@ export class PaymentsService {
 
       return {
         code: 'SUCCESS',
-        message: '成功',
+        message: 'Success',
       };
     } catch (error) {
-      console.error('处理微信支付回调失败:', error);
-      throw new BadRequestException('处理支付回调失败');
+      console.error('Failed to handle WeChat Pay callback:', error);
+      throw new BadRequestException('Failed to process payment callback');
     }
   }
 
@@ -236,7 +233,7 @@ export class PaymentsService {
     });
 
     if (!payment) {
-      throw new NotFoundException('支付订单不存在');
+      throw new NotFoundException('Payment order not found');
     }
 
     return payment;
