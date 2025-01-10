@@ -27,6 +27,10 @@ export class DiagramsService {
     return this.openaiService.streamGenerateMermaid(description);
   }
 
+  async generateTitle(description: string) {
+    return this.openaiService.generateTitle(description);
+  }
+
   async create(
     createDiagramDto: CreateDiagramDto & { mermaidCode: string },
     userId: string,
@@ -37,7 +41,16 @@ export class DiagramsService {
     // Generate title if not provided
     let title = createDiagramDto.title;
     if (!title) {
-      title = await this.openaiService.generateTitle(createDiagramDto.description);
+      let fullTitle = '';
+      const stream = await this.openaiService.generateTitle(
+        createDiagramDto.description,
+      );
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        fullTitle += content;
+      }
+      title = fullTitle;
     }
 
     // Create new diagram with Mermaid code
@@ -105,19 +118,32 @@ export class DiagramsService {
   ) {
     const diagram = await this.findOne(id, userId);
 
+    // Generate version comment by comparing descriptions
+    let comment = '';
+    const stream = await this.openaiService.generateVersionComment(
+      diagram.description,
+      createVersionDto.description,
+    );
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      comment += content;
+    }
+
     // Create new version with the generated Mermaid code
     const newVersion = await this.versionsRepository.save({
       diagramId: diagram.id,
       mermaidCode: createVersionDto.mermaidCode,
-      description: diagram.description,
+      description: createVersionDto.description,
       versionNumber: diagram.currentVersion + 1,
-      comment: createVersionDto.comment,
+      comment,
     });
 
-    // Update diagram with new version number and Mermaid code
+    // Update diagram with new version number, description and Mermaid code
     await this.diagramsRepository.update(id, {
       currentVersion: newVersion.versionNumber,
       mermaidCode: createVersionDto.mermaidCode,
+      description: createVersionDto.description,
     });
 
     return newVersion;
@@ -176,9 +202,12 @@ export class DiagramsService {
 
   async updateTitle(id: string, userId: string, title: string) {
     const diagram = await this.findOne(id, userId);
-    
+    if (!diagram) {
+      throw new NotFoundException('Diagram not found');
+    }
+
     await this.diagramsRepository.update(id, { title });
-    
+
     return {
       message: 'Title successfully updated',
       title,

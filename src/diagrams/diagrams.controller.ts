@@ -57,6 +57,36 @@ export class DiagramsController {
         })}\n\n`,
       );
 
+      // Generate title if not provided
+      let title = createDiagramDto.title;
+      if (!title) {
+        response.write(
+          `data: ${JSON.stringify({
+            status: 'generating_title',
+            message: 'Generating title...',
+          })}\n\n`,
+        );
+
+        let fullTitle = '';
+        const titleStream = await this.diagramsService.generateTitle(
+          createDiagramDto.description,
+        );
+
+        for await (const chunk of titleStream) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            fullTitle += content;
+            response.write(
+              `data: ${JSON.stringify({
+                status: 'generating_title',
+                content,
+              })}\n\n`,
+            );
+          }
+        }
+        title = fullTitle;
+      }
+
       // Generate Mermaid code with streaming
       let fullMermaidCode = '';
       const stream = await this.diagramsService.generateMermaidCode(
@@ -174,13 +204,10 @@ export class DiagramsController {
         })}\n\n`,
       );
 
-      // Get the diagram first to access its description
-      const diagram = await this.diagramsService.findOne(id, req.user.id);
-
       // Generate Mermaid code with streaming
       let fullMermaidCode = '';
       const stream = await this.diagramsService.generateMermaidCode(
-        diagram.description,
+        createVersionDto.description,
       );
 
       // Stream the Mermaid code generation progress

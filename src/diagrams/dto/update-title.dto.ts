@@ -9,4 +9,4 @@ export class UpdateTitleDto {
   @IsString()
   @IsNotEmpty()
   title: string;
-} 
+}

@@ -3,7 +3,8 @@ import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
 
 export class CreateDiagramDto {
   @ApiProperty({
-    description: 'The title of the diagram (optional, will be auto-generated if not provided)',
+    description:
+      'The title of the diagram (optional, will be auto-generated if not provided)',
     example: '用户登录流程',
     required: false,
   })

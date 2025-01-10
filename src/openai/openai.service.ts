@@ -114,7 +114,7 @@ ${description}
   }
 
   async generateTitle(description: string) {
-    const completion = await this.openai.chat.completions.create({
+    const stream = await this.openai.chat.completions.create({
       messages: [
         {
           role: 'system',
@@ -132,9 +132,51 @@ ${description}`,
         },
       ],
       model: 'deepseek-chat',
-      stream: false,
+      stream: true,
     });
 
-    return completion.choices[0].message.content;
+    return stream;
+  }
+
+  async streamGenerateTitle(description: string) {
+    return this.generateTitle(description);
+  }
+
+  async generateVersionComment(oldDescription: string, newDescription: string) {
+    const stream = await this.openai.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: `请对比前后两个版本的描述，生成一个简洁的版本说明，要求：
+1. 长度不超过 20 个字
+2. 突出主要变化点
+3. 使用简洁的动词开头
+4. 只返回说明文本，不要其他解释或标点符号
+
+示例旧描述：用户输入用户名和密码，系统验证身份并返回结果
+示例新描述：用户输入用户名、密码和验证码，系统先验证验证码，再验证身份，最后返回结果
+示例说明：添加验证码校验步骤
+
+请为以下新旧描述生成版本说明：
+
+旧描述：
+${oldDescription}
+
+新描述：
+${newDescription}`,
+        },
+      ],
+      model: 'deepseek-chat',
+      stream: true,
+    });
+
+    return stream;
+  }
+
+  async streamGenerateVersionComment(
+    oldDescription: string,
+    newDescription: string,
+  ) {
+    return this.generateVersionComment(oldDescription, newDescription);
   }
 }
