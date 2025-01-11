@@ -15,8 +15,8 @@ import { createHash } from 'crypto';
 
 @Injectable()
 export class PaymentsService {
-  private readonly alipaySdk: AlipaySdk;
-  private readonly wechatPay: WxPay;
+  private alipaySdk: AlipaySdk | null = null;
+  private wechatPay: WxPay | null = null;
 
   constructor(
     @InjectRepository(Payment)
@@ -24,31 +24,56 @@ export class PaymentsService {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {
-    // Initialize Alipay SDK
-    this.alipaySdk = new AlipaySdk({
-      appId: this.configService.get('ALIPAY_APP_ID'),
-      privateKey: this.configService.get('ALIPAY_PRIVATE_KEY'),
-      alipayPublicKey: this.configService.get('ALIPAY_PUBLIC_KEY'),
-      timeout: 5000,
-      camelcase: true,
-    });
+    this.initializePaymentSDKs();
+  }
 
-    // Initialize WeChat Pay SDK
-    this.wechatPay = new WxPay({
-      appid: this.configService.get('WECHAT_APP_ID'),
-      mchid: this.configService.get('WECHAT_MCH_ID'),
-      publicKey: this.configService.get('WECHAT_PUBLIC_KEY'),
-      privateKey: this.configService.get('WECHAT_PRIVATE_KEY'),
-    });
+  private initializePaymentSDKs() {
+    // Initialize Alipay SDK if configuration is available
+    const alipayAppId = this.configService.get('ALIPAY_APP_ID');
+    const alipayPrivateKey = this.configService.get('ALIPAY_PRIVATE_KEY');
+    const alipayPublicKey = this.configService.get('ALIPAY_PUBLIC_KEY');
+
+    if (alipayAppId && alipayPrivateKey && alipayPublicKey) {
+      this.alipaySdk = new AlipaySdk({
+        appId: alipayAppId,
+        privateKey: alipayPrivateKey,
+        alipayPublicKey: alipayPublicKey,
+        timeout: 5000,
+        camelcase: true,
+      });
+    }
+
+    // Initialize WeChat Pay SDK if configuration is available
+    const wechatAppId = this.configService.get('WECHAT_APP_ID');
+    const wechatMchId = this.configService.get('WECHAT_MCH_ID');
+    const wechatPublicKey = this.configService.get('WECHAT_PUBLIC_KEY');
+    const wechatPrivateKey = this.configService.get('WECHAT_PRIVATE_KEY');
+
+    if (wechatAppId && wechatMchId && wechatPublicKey && wechatPrivateKey) {
+      this.wechatPay = new WxPay({
+        appid: wechatAppId,
+        mchid: wechatMchId,
+        publicKey: wechatPublicKey,
+        privateKey: wechatPrivateKey,
+      });
+    }
   }
 
   private calculateAmount(durationInDays: number): number {
-    // Calculate payment amount (in cents)
     const pricePerDay = 100; // 1 CNY per day
     return durationInDays * pricePerDay;
   }
 
   async create(userId: string, createPaymentDto: CreatePaymentDto) {
+    // Check if the selected payment method is available
+    if (createPaymentDto.method === PaymentMethod.ALIPAY && !this.alipaySdk) {
+      throw new BadRequestException('Alipay payment method is not available');
+    }
+
+    if (createPaymentDto.method === PaymentMethod.WECHAT && !this.wechatPay) {
+      throw new BadRequestException('WeChat Pay method is not available');
+    }
+
     const amount = this.calculateAmount(createPaymentDto.durationInDays);
 
     const payment = await this.paymentsRepository.save({
@@ -59,7 +84,6 @@ export class PaymentsService {
       status: PaymentStatus.PENDING,
     });
 
-    // Generate payment URL based on payment method
     let payUrl: string;
     if (createPaymentDto.method === PaymentMethod.ALIPAY) {
       payUrl = await this.createAlipayOrder(payment);
@@ -74,9 +98,13 @@ export class PaymentsService {
   }
 
   private async createAlipayOrder(payment: Payment): Promise<string> {
+    if (!this.alipaySdk) {
+      throw new BadRequestException('Alipay is not configured');
+    }
+
     const outTradeNo = `${Date.now()}_${payment.id}`;
     try {
-      const result = this.alipaySdk.pageExec('alipay.trade.page.pay', {
+      const result = await this.alipaySdk.pageExec('alipay.trade.page.pay', {
         notifyUrl: this.configService.get('ALIPAY_NOTIFY_URL'),
         returnUrl: this.configService.get('ALIPAY_RETURN_URL'),
         bizContent: {
@@ -96,10 +124,14 @@ export class PaymentsService {
   }
 
   private async createWechatOrder(payment: Payment): Promise<string> {
+    if (!this.wechatPay) {
+      throw new BadRequestException('WeChat Pay is not configured');
+    }
+
     try {
       const outTradeNo = `${Date.now()}_${payment.id}`;
       const notifyUrl = this.configService.get('WECHAT_NOTIFY_URL');
-      // Create unified order
+
       const result = await this.wechatPay.transactions_native({
         description: `Subscribe for ${payment.durationInDays} days`,
         out_trade_no: outTradeNo,
@@ -125,8 +157,11 @@ export class PaymentsService {
   }
 
   async handleAlipayCallback(params: Record<string, string>) {
+    if (!this.alipaySdk) {
+      throw new BadRequestException('Alipay is not configured');
+    }
+
     try {
-      // Verify signature
       const isValid = await this.alipaySdk.checkNotifySign(params);
       if (!isValid) {
         throw new BadRequestException('Invalid signature');
@@ -141,14 +176,12 @@ export class PaymentsService {
       }
 
       if (params.trade_status === 'TRADE_SUCCESS') {
-        // Update payment status
         await this.paymentsRepository.update(payment.id, {
           status: PaymentStatus.SUCCESS,
           tradeNo: params.trade_no,
           paidAt: new Date(),
         });
 
-        // Update user subscription status
         await this.usersService.upgradeToPro(
           payment.userId,
           payment.durationInDays,
@@ -167,14 +200,16 @@ export class PaymentsService {
   }
 
   async handleWechatCallback(params: Record<string, any>) {
+    if (!this.wechatPay) {
+      throw new BadRequestException('WeChat Pay is not configured');
+    }
+
     try {
-      // Verify signature
       const signature = params.signature;
       const timestamp = params.timestamp;
       const nonce = params.nonce;
       const body = params.body;
 
-      // Generate signature
       const message = `${timestamp}\n${nonce}\n${body}\n`;
       const sign = createHash('sha256').update(message).digest('base64');
 
@@ -192,14 +227,12 @@ export class PaymentsService {
       }
 
       if (result.trade_state === 'SUCCESS') {
-        // Update payment status
         await this.paymentsRepository.update(payment.id, {
           status: PaymentStatus.SUCCESS,
           tradeNo: result.transaction_id,
           paidAt: new Date(),
         });
 
-        // Update user subscription status
         await this.usersService.upgradeToPro(
           payment.userId,
           payment.durationInDays,
