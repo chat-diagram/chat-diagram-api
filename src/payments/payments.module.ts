@@ -11,4 +11,4 @@ import { UsersModule } from '../users/users.module';
   providers: [PaymentsService],
   exports: [PaymentsService],
 })
-export class PaymentsModule {} 
+export class PaymentsModule {}

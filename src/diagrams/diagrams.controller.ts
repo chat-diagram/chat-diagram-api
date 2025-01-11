@@ -120,6 +120,7 @@ export class DiagramsController {
         {
           ...createDiagramDto,
           mermaidCode: fullMermaidCode,
+          title,
         },
         req.user.id,
       );
@@ -133,12 +134,17 @@ export class DiagramsController {
       );
 
       response.write('data: [DONE]\n\n');
-      response.end();
     } catch (error) {
-      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error creating diagram',
-        error: error.message,
-      });
+      // Send error event before ending the stream
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'error',
+          message: error.message || 'Error creating diagram',
+        })}\n\n`,
+      );
+      response.write('data: [DONE]\n\n');
+    } finally {
+      response.end();
     }
   }
 

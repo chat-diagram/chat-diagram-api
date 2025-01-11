@@ -6,6 +6,7 @@ import { OpenAIModule } from './openai/openai.module';
 import { DiagramsModule } from './diagrams/diagrams.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PaymentsModule } from './payments/payments.module';
+import { AuthModule } from './auth/auth.module';
 import { getDatabaseConfig } from './config/database.config';
 
 @Module({
@@ -18,6 +19,7 @@ import { getDatabaseConfig } from './config/database.config';
       inject: [ConfigService],
       useFactory: getDatabaseConfig,
     }),
+    AuthModule,
     UsersModule,
     OpenAIModule,
     DiagramsModule,
