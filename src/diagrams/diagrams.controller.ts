@@ -210,10 +210,24 @@ export class DiagramsController {
         })}\n\n`,
       );
 
+      // Get current diagram for context
+      const diagram = await this.diagramsService.findOne(id, req.user.id);
+      
+      // Send progress update: Generating with context
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'context',
+          message: 'Generating with previous version context...',
+          currentDescription: diagram.description,
+          currentMermaidCode: diagram.mermaidCode,
+        })}\n\n`,
+      );
+
       // Generate Mermaid code with streaming
       let fullMermaidCode = '';
       const stream = await this.diagramsService.generateMermaidCode(
         createVersionDto.description,
+        diagram.mermaidCode, // Pass current code as context
       );
 
       // Stream the Mermaid code generation progress
@@ -257,12 +271,17 @@ export class DiagramsController {
       );
 
       response.write('data: [DONE]\n\n');
-      response.end();
     } catch (error) {
-      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error creating version',
-        error: error.message,
-      });
+      // Send error event before ending the stream
+      response.write(
+        `data: ${JSON.stringify({
+          status: 'error',
+          message: error.message || 'Error creating version',
+        })}\n\n`,
+      );
+      response.write('data: [DONE]\n\n');
+    } finally {
+      response.end();
     }
   }
 

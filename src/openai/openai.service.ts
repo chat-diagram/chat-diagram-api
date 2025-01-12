@@ -86,26 +86,55 @@ ${description}
     return completion.choices[0].message.content;
   }
 
-  async streamGenerateMermaid(description: string) {
-    const stream = await this.openai.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `请根据以下描述生成一个 Mermaid 的 DSL 代码：
-${description}
+  async streamGenerateMermaid(description: string, context?: string) {
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      {
+        role: 'system',
+        content: `作为一位精通 Mermaid 图表绘制的专家，请根据用户的描述生成相应的 Mermaid 代码。请确保生成的代码符合 Mermaid 语法规范，并能准确表达用户需求。
 
 要求：
-1. 自动判断最合适的 Mermaid 图表类型（如 sequenceDiagram、graph TD、stateDiagram 等）
-2. 使用正确的语法和合适的图表类型
-3. 节点 ID 必须有意义且唯一
-4. 确保语法正确
-5. 适当使用不同的形状和样式
-6. 只返回 Mermaid DSL 代码，不要其他解释
-7. 不要使用任何注释
-8. 不要使用任何代码块
-9. 不要出现 \`\`\` 代码块`,
-        },
-      ],
+1. 只输出 Mermaid 代码，不要包含任何其他说明文字
+2. 确保代码的可读性和可维护性
+3. 使用恰当的图表类型（如流程图、时序图、类图等）
+4. 合理组织图表结构，使其清晰易懂
+5. 适当添加注释，帮助理解代码含义
+
+示例输出：
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Database
+    
+    User->>Frontend: 输入用户名和密码
+    Frontend->>Backend: 发送登录请求
+    Backend->>Database: 验证用户信息
+    Database-->>Backend: 返回验证结果
+    
+    alt 验证成功
+        Backend-->>Frontend: 返回登录成功
+        Frontend-->>User: 显示登录成功
+    else 验证失败
+        Backend-->>Frontend: 返回登录失败
+        Frontend-->>User: 显示错误信息
+    end`,
+      },
+    ];
+
+    if (context) {
+      messages.push({
+        role: 'user',
+        content: `当前版本的 Mermaid 代码如下，请参考这个上下文来生成新版本：\n\`\`\`mermaid\n${context}\n\`\`\``,
+      });
+    }
+
+    messages.push({
+      role: 'user',
+      content: description,
+    });
+
+    const stream = await this.openai.chat.completions.create({
+      messages,
       model: 'deepseek-chat',
       stream: true,
     });

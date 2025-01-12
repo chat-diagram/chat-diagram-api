@@ -25,8 +25,8 @@ export class DiagramsService {
     private readonly usersService: UsersService,
   ) {}
 
-  async generateMermaidCode(description: string) {
-    return this.openaiService.streamGenerateMermaid(description);
+  async generateMermaidCode(description: string, context?: string) {
+    return this.openaiService.streamGenerateMermaid(description, context);
   }
 
   async generateTitle(description: string) {
