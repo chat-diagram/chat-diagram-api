@@ -93,4 +93,4 @@ export class Payment {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
   user: User;
-} 
+}

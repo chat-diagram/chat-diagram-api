@@ -77,4 +77,4 @@ export class PaymentsController {
   handleWechatCallback(@Body() params: any) {
     return this.paymentsService.handleWechatCallback(params);
   }
-} 
+}

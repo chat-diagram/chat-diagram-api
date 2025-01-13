@@ -9,7 +9,6 @@ import {
   Request,
   ParseIntPipe,
   Res,
-  HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -212,7 +211,7 @@ export class DiagramsController {
 
       // Get current diagram for context
       const diagram = await this.diagramsService.findOne(id, req.user.id);
-      
+
       // Send progress update: Generating with context
       response.write(
         `data: ${JSON.stringify({

@@ -24,4 +24,4 @@ export class CreatePaymentDto {
   @IsInt()
   @Min(30)
   durationInDays: number;
-} 
+}
