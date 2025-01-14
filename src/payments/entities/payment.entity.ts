@@ -78,6 +78,13 @@ export class Payment {
   tradeNo: string;
 
   @ApiProperty({
+    description: 'Out trade number for payment provider',
+    example: '1704980400000_123e4567-e89b-12d3-a456-426614174000',
+  })
+  @Column({ nullable: true })
+  outTradeNo: string;
+
+  @ApiProperty({
     description: 'Payment completion time',
     example: '2024-01-04T10:59:59Z',
   })

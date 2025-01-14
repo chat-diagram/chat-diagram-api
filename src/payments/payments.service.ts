@@ -38,8 +38,8 @@ export class PaymentsService {
         appId: alipayAppId,
         privateKey: alipayPrivateKey,
         alipayPublicKey: alipayPublicKey,
+        signType: 'RSA2',
         timeout: 5000,
-        camelcase: true,
       });
     }
 
@@ -104,16 +104,25 @@ export class PaymentsService {
 
     const outTradeNo = `${Date.now()}_${payment.id}`;
     try {
-      const result = await this.alipaySdk.pageExec('alipay.trade.page.pay', {
-        notifyUrl: this.configService.get('ALIPAY_NOTIFY_URL'),
-        returnUrl: this.configService.get('ALIPAY_RETURN_URL'),
-        bizContent: {
-          outTradeNo,
-          productCode: 'FAST_INSTANT_TRADE_PAY',
-          totalAmount: (payment.amount / 100).toFixed(2),
+      // 更新支付记录的 outTradeNo
+      await this.paymentsRepository.update(payment.id, { outTradeNo });
+      // 生成支付链接
+      const notifyUrl = this.configService.get('ALIPAY_NOTIFY_URL');
+
+      if (!notifyUrl) {
+        throw new Error('Alipay notify_url  is not configured');
+      }
+
+      const result = this.alipaySdk.pageExec('alipay.trade.page.pay', {
+        method: 'GET',
+        notify_url: notifyUrl,
+        biz_content: JSON.stringify({
+          out_trade_no: outTradeNo,
+          product_code: 'FAST_INSTANT_TRADE_PAY',
+          total_amount: (payment.amount / 100).toFixed(2),
           subject: `Subscribe for ${payment.durationInDays} days`,
           body: `Activate Pro Plan for ${payment.durationInDays} days`,
-        },
+        }),
       });
 
       return result;
