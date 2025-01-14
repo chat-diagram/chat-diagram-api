@@ -12,6 +12,7 @@ import { DiagramVersion } from './entities/diagram-version.entity';
 import { CreateDiagramDto } from './dto/create-diagram.dto';
 import { CreateVersionDto } from './dto/create-version.dto';
 import { UsersService } from '../users/users.service';
+import { MoreThan } from 'typeorm';
 
 @Injectable()
 export class DiagramsService {
@@ -164,9 +165,16 @@ export class DiagramsService {
       throw new NotFoundException(`Version ${versionNumber} not found`);
     }
 
-    // Update diagram with old version's code
+    // Delete all versions after the target version
+    await this.versionsRepository.delete({
+      diagramId: id,
+      versionNumber: MoreThan(versionNumber),
+    });
+
+    // Update diagram with old version's code and description
     await this.diagramsRepository.update(id, {
       mermaidCode: targetVersion.mermaidCode,
+      description: targetVersion.description,
       currentVersion: versionNumber,
     });
 
