@@ -60,8 +60,14 @@ export class PaymentsService {
   }
 
   private calculateAmount(durationInDays: number): number {
-    const pricePerDay = 100; // 1 CNY per day
-    return durationInDays * pricePerDay;
+    // 转换为月数（向上取整）
+    const months = Math.ceil(durationInDays / 30);
+
+    // 180天（6个月）以上每月10元，否则每月12元
+    const pricePerMonth = months >= 6 ? 1000 : 1200; // 单位：分
+
+    // 计算总价
+    return months * pricePerMonth;
   }
 
   async create(userId: string, createPaymentDto: CreatePaymentDto) {
@@ -166,12 +172,13 @@ export class PaymentsService {
   }
 
   async handleAlipayCallback(params: Record<string, string>) {
+    console.log(params);
     if (!this.alipaySdk) {
       throw new BadRequestException('Alipay is not configured');
     }
 
     try {
-      const isValid = await this.alipaySdk.checkNotifySign(params);
+      const isValid = this.alipaySdk.checkNotifySign(params);
       if (!isValid) {
         throw new BadRequestException('Invalid signature');
       }
