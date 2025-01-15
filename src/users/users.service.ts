@@ -190,4 +190,27 @@ export class UsersService {
     await this.usersRepository.restore(userId);
     return { message: 'User successfully restored' };
   }
+
+  async createSubscription(userId: string, durationInDays: number) {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const now = new Date();
+    const proExpiresAt = new Date(
+      now.getTime() + durationInDays * 24 * 60 * 60 * 1000,
+    );
+
+    const subscription = await this.subscriptionsRepository.save({
+      userId,
+      isPro: true,
+      proExpiresAt,
+      remainingVersions: 0, // Pro用户设置一个很大的数值
+    });
+
+    return subscription;
+  }
 }

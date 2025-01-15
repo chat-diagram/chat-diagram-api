@@ -198,10 +198,22 @@ export class PaymentsService {
           paidAt: new Date(),
         });
 
-        await this.usersService.upgradeToPro(
-          payment.userId,
-          payment.durationInDays,
-        );
+        try {
+          await this.usersService.upgradeToPro(
+            payment.userId,
+            payment.durationInDays,
+          );
+        } catch (error) {
+          if (error.message === 'Subscription not found') {
+            // 如果订阅不存在，创建一个新的
+            await this.usersService.createSubscription(
+              payment.userId,
+              payment.durationInDays,
+            );
+          } else {
+            throw error;
+          }
+        }
       } else {
         await this.paymentsRepository.update(payment.id, {
           status: PaymentStatus.FAILED,

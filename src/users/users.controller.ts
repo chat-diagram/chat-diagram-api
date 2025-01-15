@@ -62,6 +62,7 @@ export class UsersController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   softDelete(@Param('id') id: string): Promise<MessageResponseDto> {
     return this.usersService.softDelete(id);
   }
@@ -79,6 +80,7 @@ export class UsersController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @Post(':id/restore')
+  @UseGuards(JwtAuthGuard)
   restore(@Param('id') id: string): Promise<MessageResponseDto> {
     return this.usersService.restore(id);
   }

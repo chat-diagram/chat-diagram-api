@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
-import { OpenAIModule } from './openai/openai.module';
-import { DiagramsModule } from './diagrams/diagrams.module';
+import { AuthModule } from './auth/auth.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PaymentsModule } from './payments/payments.module';
-import { AuthModule } from './auth/auth.module';
+import { TasksModule } from './tasks/tasks.module';
 import { getDatabaseConfig } from './config/database.config';
+import { DiagramsModule } from './diagrams/diagrams.module';
+import { OpenAIModule } from './openai/openai.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { getDatabaseConfig } from './config/database.config';
     DiagramsModule,
     ProjectsModule,
     PaymentsModule,
+    TasksModule,
   ],
 })
 export class AppModule {}

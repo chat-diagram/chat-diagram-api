@@ -21,7 +21,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('payments')
 @Controller('payments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
@@ -32,6 +31,7 @@ export class PaymentsController {
     type: Payment,
   })
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(@Request() req, @Body() createPaymentDto: CreatePaymentDto) {
     return this.paymentsService.create(req.user.id, createPaymentDto);
   }
@@ -43,6 +43,7 @@ export class PaymentsController {
     type: [Payment],
   })
   @Get()
+  @UseGuards(JwtAuthGuard)
   findUserPayments(@Request() req) {
     return this.paymentsService.findUserPayments(req.user.id);
   }
@@ -54,6 +55,7 @@ export class PaymentsController {
     type: Payment,
   })
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   findOne(@Request() req, @Param('id') id: string) {
     return this.paymentsService.findOne(id, req.user.id);
   }
