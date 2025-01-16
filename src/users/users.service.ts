@@ -115,7 +115,9 @@ export class UsersService {
       throw new NotFoundException('Subscription not found');
     }
 
-    const proExpiresAt = new Date();
+    const proExpiresAt = subscription.proExpiresAt
+      ? subscription.proExpiresAt
+      : new Date();
     proExpiresAt.setDate(proExpiresAt.getDate() + durationInDays);
 
     await this.subscriptionsRepository.update(subscription.id, {

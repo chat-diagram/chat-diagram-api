@@ -115,13 +115,21 @@ export class PaymentsService {
       // 生成支付链接
       const notifyUrl = this.configService.get('ALIPAY_NOTIFY_URL');
 
+      let returnUrl = this.configService.get('ALIPAY_RETURN_URL');
+
       if (!notifyUrl) {
         throw new Error('Alipay notify_url  is not configured');
       }
 
+      if (!returnUrl) {
+        throw new Error('Alipay return_url  is not configured');
+      }
+
+      returnUrl = `${returnUrl}/${payment.id}`;
       const result = this.alipaySdk.pageExec('alipay.trade.page.pay', {
         method: 'GET',
         notify_url: notifyUrl,
+        return_url: returnUrl,
         biz_content: JSON.stringify({
           out_trade_no: outTradeNo,
           product_code: 'FAST_INSTANT_TRADE_PAY',
