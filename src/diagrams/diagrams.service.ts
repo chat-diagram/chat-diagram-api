@@ -41,6 +41,9 @@ export class DiagramsService {
     // Check if user has access to the project
     await this.projectsService.findOne(createDiagramDto.projectId, userId);
 
+    // Check version limit for non-pro users
+    await this.usersService.checkVersionLimit(userId);
+
     // Generate title if not provided
     let title = createDiagramDto.title;
     if (!title) {
