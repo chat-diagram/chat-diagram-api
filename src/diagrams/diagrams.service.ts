@@ -2,17 +2,26 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { OpenAIService } from '../openai/openai.service';
 import { ProjectsService } from '../projects/projects.service';
 import { Diagram } from './entities/diagram.entity';
 import { DiagramVersion } from './entities/diagram-version.entity';
+import { ShareToken } from './entities/share-token.entity';
 import { CreateDiagramDto } from './dto/create-diagram.dto';
 import { CreateVersionDto } from './dto/create-version.dto';
+import {
+  CreateShareTokenDto,
+  ShareExpiration,
+} from './dto/create-share-token.dto';
 import { UsersService } from '../users/users.service';
 import { MoreThan } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { ShareTokenResponseDto } from './dto/share-token-response.dto';
 
 @Injectable()
 export class DiagramsService {
@@ -21,9 +30,13 @@ export class DiagramsService {
     private readonly diagramsRepository: Repository<Diagram>,
     @InjectRepository(DiagramVersion)
     private readonly versionsRepository: Repository<DiagramVersion>,
+    @InjectRepository(ShareToken)
+    private readonly shareTokensRepository: Repository<ShareToken>,
     private readonly openaiService: OpenAIService,
     private readonly projectsService: ProjectsService,
     private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async generateMermaidCode(description: string, context?: string) {
@@ -227,6 +240,81 @@ export class DiagramsService {
     return {
       message: 'Title successfully updated',
       title,
+    };
+  }
+
+  async createShareToken(
+    id: string,
+    userId: string,
+    createShareTokenDto: CreateShareTokenDto,
+  ): Promise<ShareTokenResponseDto> {
+    const diagram = await this.findOne(id, userId);
+    if (!diagram) {
+      throw new NotFoundException('Diagram not found');
+    }
+
+    let expiresAt: Date | null = null;
+    switch (createShareTokenDto.expiration) {
+      case ShareExpiration.WEEK:
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+        break;
+      case ShareExpiration.TWO_WEEKS:
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 15);
+        break;
+      case ShareExpiration.NEVER:
+        expiresAt = null;
+        break;
+      default:
+        throw new BadRequestException('Invalid expiration time');
+    }
+
+    const shareToken = await this.shareTokensRepository.save({
+      diagramId: id,
+      expiresAt,
+    });
+
+    return {
+      token: shareToken.id,
+      expiresIn: createShareTokenDto.expiration,
+    };
+  }
+
+  async getSharedDiagram(uuid: string) {
+    const shareToken = await this.shareTokensRepository.findOne({
+      where: { id: uuid },
+      relations: ['diagram', 'diagram.versions', 'diagram.user'],
+    });
+
+    if (!shareToken) {
+      throw new UnauthorizedException('Invalid share token');
+    }
+
+    if (shareToken.expiresAt && shareToken.expiresAt < new Date()) {
+      throw new UnauthorizedException('Share link has expired');
+    }
+
+    const diagram = shareToken.diagram;
+    if (!diagram) {
+      throw new NotFoundException('Diagram not found');
+    }
+
+    // 只返回最新版本
+    const latestVersion = diagram.versions.reduce((prev, current) =>
+      prev.versionNumber > current.versionNumber ? prev : current,
+    );
+
+    return {
+      id: diagram.id,
+      title: diagram.title,
+      description: diagram.description,
+      mermaidCode: latestVersion.mermaidCode,
+      versionNumber: latestVersion.versionNumber,
+      user: {
+        id: diagram.user.id,
+        username: diagram.user.username,
+      },
     };
   }
 }

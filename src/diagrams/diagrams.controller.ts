@@ -20,14 +20,15 @@ import {
 import { DiagramsService } from './diagrams.service';
 import { CreateDiagramDto } from './dto/create-diagram.dto';
 import { CreateVersionDto } from './dto/create-version.dto';
+import { CreateShareTokenDto } from './dto/create-share-token.dto';
 import { Diagram } from './entities/diagram.entity';
 import { DiagramVersion } from './entities/diagram-version.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateTitleDto } from './dto/update-title.dto';
+import { ShareTokenResponseDto } from './dto/share-token-response.dto';
+import { SharedDiagramResponseDto } from './dto/shared-diagram-response.dto';
 
 @ApiTags('diagrams')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('diagrams')
 export class DiagramsController {
   constructor(private readonly diagramsService: DiagramsService) {}
@@ -38,6 +39,8 @@ export class DiagramsController {
     description: 'Diagram creation progress and result',
   })
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   async create(
     @Body() createDiagramDto: CreateDiagramDto,
     @Request() req,
@@ -154,6 +157,8 @@ export class DiagramsController {
     type: [Diagram],
   })
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   findAll(@Request() req) {
     return this.diagramsService.findAll(req.user.id);
   }
@@ -166,6 +171,8 @@ export class DiagramsController {
   })
   @ApiResponse({ status: 404, description: 'Project not found' })
   @Get('project/:projectId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   findByProject(@Param('projectId') projectId: string, @Request() req) {
     return this.diagramsService.findByProject(projectId, req.user.id);
   }
@@ -178,6 +185,8 @@ export class DiagramsController {
   })
   @ApiResponse({ status: 404, description: 'Diagram not found' })
   @Get(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: string, @Request() req) {
     return this.diagramsService.findOne(id, req.user.id);
   }
@@ -190,6 +199,8 @@ export class DiagramsController {
     description: 'Version creation progress and result',
   })
   @Post(':id/versions')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   async createVersion(
     @Param('id') id: string,
     @Body() createVersionDto: CreateVersionDto,
@@ -291,6 +302,8 @@ export class DiagramsController {
     type: [DiagramVersion],
   })
   @Get(':id/versions')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   getVersions(@Param('id') id: string, @Request() req) {
     return this.diagramsService.getVersions(id, req.user.id);
   }
@@ -301,6 +314,8 @@ export class DiagramsController {
     description: 'Successfully rolled back to the specified version',
   })
   @Post(':id/versions/:versionNumber/rollback')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   rollbackVersion(
     @Param('id') id: string,
     @Param('versionNumber', ParseIntPipe) versionNumber: number,
@@ -316,6 +331,8 @@ export class DiagramsController {
   })
   @ApiResponse({ status: 404, description: 'Diagram not found' })
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string, @Request() req) {
     return this.diagramsService.remove(id, req.user.id);
   }
@@ -327,6 +344,8 @@ export class DiagramsController {
   })
   @ApiResponse({ status: 404, description: 'Diagram not found' })
   @Post(':id/restore')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   restore(@Param('id') id: string, @Request() req) {
     return this.diagramsService.restore(id, req.user.id);
   }
@@ -338,6 +357,8 @@ export class DiagramsController {
   })
   @ApiResponse({ status: 404, description: 'Diagram not found' })
   @Post(':id/title')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   updateTitle(
     @Param('id') id: string,
     @Body() updateTitleDto: UpdateTitleDto,
@@ -348,5 +369,43 @@ export class DiagramsController {
       req.user.id,
       updateTitleDto.title,
     );
+  }
+
+  @ApiOperation({ summary: 'Create share token for a diagram' })
+  @ApiResponse({
+    status: 201,
+    description: 'Share token created successfully',
+    type: ShareTokenResponseDto,
+  })
+  @Post(':id/share')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  createShareToken(
+    @Param('id') id: string,
+    @Body() createShareTokenDto: CreateShareTokenDto,
+    @Request() req,
+  ): Promise<ShareTokenResponseDto> {
+    return this.diagramsService.createShareToken(
+      id,
+      req.user.id,
+      createShareTokenDto,
+    );
+  }
+
+  @ApiOperation({ summary: 'Get shared diagram by token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return the shared diagram',
+    type: SharedDiagramResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Shared diagram not found or token expired',
+  })
+  @Get('shared/:uuid')
+  getSharedDiagram(
+    @Param('uuid') uuid: string,
+  ): Promise<SharedDiagramResponseDto> {
+    return this.diagramsService.getSharedDiagram(uuid);
   }
 }
