@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ShareTokenResponseDto {
   @ApiProperty({
-    description: 'JWT token for accessing the shared diagram',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'UUID of the shared diagram',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  token: string;
+  uuid: string;
 
   @ApiProperty({
     description: 'Token expiration time',

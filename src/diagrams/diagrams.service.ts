@@ -276,7 +276,7 @@ export class DiagramsService {
     });
 
     return {
-      token: shareToken.id,
+      uuid: shareToken.id,
       expiresIn: createShareTokenDto.expiration,
     };
   }
