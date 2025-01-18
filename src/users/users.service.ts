@@ -138,14 +138,14 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new ForbiddenException('Invalid credentials');
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new ForbiddenException('Invalid credentials');
     }
 
     // Get subscription info
