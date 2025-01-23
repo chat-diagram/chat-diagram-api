@@ -199,7 +199,7 @@ export class DiagramsService {
 
   async getVersions(id: string, userId: string) {
     const diagram = await this.findOne(id, userId);
-    return diagram.versions;
+    return diagram.versions.sort((a, b) => a.versionNumber - b.versionNumber);
   }
 
   async remove(id: string, userId: string) {
